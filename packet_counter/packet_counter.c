@@ -6,6 +6,7 @@
 #include <linux/ip.h>
 #include <linux/tcp.h>
 #include <linux/udp.h>
+#include <linux/proc_fs.h>
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Pooanm Gupta");
@@ -54,6 +55,50 @@ static struct nf_hook_ops netfilter_ops = {
 	.priority = NF_IP_PRI_FIRST,
 };
 
+/*Proc read function*/
+static ssize_t proc_read(struct file* file, char __user* user_buffer, size_t count, loff_t* offset){
+	char data[128];
+	int data_len;
+
+	if(*offset > 0)
+		return 0;
+	data_len = snprintf(data, sizeof(data), "TCP packets: %d\nUDP packets: %d\nICMP packets: %d\n", tcp_count, udp_count, icmp_count);
+
+	if(copy_to_user(user_buffer, data, data_len))
+		return -EFAULT;
+	*offset = data_len;
+	return data_len;
+}
+
+/*Proc read function*/
+static ssize_t proc_write(struct file* file, const char __user *buffer, size_t len, loff_t *offset){
+	char input[16];
+
+	if(len > sizeof(input)-1)
+		return -EINVAL;
+	
+	if(copy_from_user(input, buffer, len))
+		return -EFAULT;
+
+	input[len] = '\0';
+
+	if(strncmp(input, "reset",5) == 0){
+		tcp_count = 0;
+		udp_count = 0;
+		icmp_count = 0;
+		printk(KERN_INFO "Packet counters reset\n");
+	} else {
+		printk(KERN_WARNING "Invalid command");
+	}
+	return len;
+}
+
+/*Proc file struct*/
+static const struct proc_ops p_ops = {
+	.proc_read = proc_read,
+	.proc_write = proc_write,
+};
+
 static int __init packet_counter_init(void){
 	int ret;
 
@@ -65,11 +110,19 @@ static int __init packet_counter_init(void){
 		printk(KERN_ERR "Failed to reister Netfilter hook. Err %d \n", ret);
 		return ret;
 	}
-	printk(KERN_INFO "Netfilter hook registered\n");
+
+	/*Craete Proc file*/
+	if(!proc_create("packet_counter", 0666, NULL, &p_ops)){
+		nf_unregister_net_hook(&init_net, &netfilter_ops);
+		printk(KERN_ERR "Failed to craete proc file. Unregistered net_hook");
+		return -ENOMEM;
+	}
+	printk(KERN_INFO "Netfilter hook registered. Proc file init done\n");
 	return 0;
 }
 
 static void __exit packet_counter_exit(void){
+	remove_proc_entry("packet_counter", NULL);
 	nf_unregister_net_hook(&init_net, &netfilter_ops);
 	printk(KERN_INFO "Packet Counter Module un-loaded\n");
 }
