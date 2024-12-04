@@ -18,6 +18,29 @@ cat /proc/helloworlddriver
 sudo rmmod module_hello
 ```
 
+## Character Driver Linux Kernel Module (module_char_driver)
+Test module for demonstrating read and write for character driver (`/dev`). 
+
+### Testing Module
+```
+# Enable kernel logs 
+sudo dmesg -w &
+
+# Load Module
+sudo insmod module_char_driver.ko
+
+# Read from /dev
+cat /dev/char_driver
+
+# Reset counters
+echo "HelloWorld from Char driver" > /dev/char_driver
+cat /dev/char_driver
+
+# Unload module
+sudo rmmod module_char_driver.ko
+```
+
+
 ## Packet Counter Linux Kernel Module (packet_counter)
 Module for counting and logging TCP, UDP and ICMP network packets. It demonstates how to hook into the linux networking stack using the `Netfilters` library and provides packet stats using `/proc` interface. 
 
