@@ -18,7 +18,7 @@ cat /proc/helloworlddriver
 sudo rmmod module_hello
 ```
 
-## Packet Counter Linux Kernel Module (module_hello)
+## Packet Counter Linux Kernel Module (packet_counter)
 Module for counting and logging TCP, UDP and ICMP network packets. It demonstates how to hook into the linux networking stack using the `Netfilters` library and provides packet stats using `/proc` interface. 
 
 ### Testing Module
