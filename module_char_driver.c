@@ -67,6 +67,12 @@ static struct file_operations fops = {
     .release = dev_release,
 };
 
+static char *char_devnode(const struct device *dev, umode_t *mode) {
+    if (mode)
+        *mode = 0666;  // Set permissions to rw-rw-rw-
+    return NULL;       // Return NULL (standard for devnode)
+}
+
 static int __init char_driver_init(void) {
     printk(KERN_INFO "CharDevice: Initializing\n");
 
@@ -86,6 +92,9 @@ static int __init char_driver_init(void) {
         return PTR_ERR(char_class);
     }
 
+    //set 0666 permission
+    char_class->devnode = char_devnode;
+
     // Create device node
     char_device = device_create(char_class, NULL, MKDEV(major_number, 0), NULL, DEVICE_NAME);
     if (IS_ERR(char_device)) {
@@ -94,7 +103,7 @@ static int __init char_driver_init(void) {
         printk(KERN_ALERT "CharDevice: Failed to create device\n");
         return PTR_ERR(char_device);
     }
-
+    
     printk(KERN_INFO "CharDevice: Device created successfully\n");
     return 0;
 }
