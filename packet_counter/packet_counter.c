@@ -70,11 +70,9 @@ static ssize_t proc_read(struct file* file, char __user* user_buffer, size_t cou
 	return data_len;
 }
 
-/*Proc read function*/
-static ssize_t proc_write(struct file* file, const char __user *buffer, size_t len, loff_t *offset){
+/*Proc write function*/
+static ssize_t proc_write_options(struct file* file, const char __user *buffer, size_t len, loff_t *offset){
 	char input[16];
-	char data[128];
-	int data_len;
 
 	if(*offset > 0)
 		return 0;
@@ -93,77 +91,17 @@ static ssize_t proc_write(struct file* file, const char __user *buffer, size_t l
 		udp_count = 0;
 		icmp_count = 0;
 		printk(KERN_INFO "Packet counters reset\n");
-		printk(KERN_INFO "TCP packet count: %d\n", tcp_count);
 
-	} else if(strncmp(input, "tcp",3) == 0){
-		/*print tcp count only*/
-		printk(KERN_INFO "TCP packet count: %d\n", tcp_count);
-		data_len = snprintf(data, sizeof(data), "TCP packets: %d\n", tcp_count);
+	} else
+		printk(KERN_WARNING "Invalid command: %s\n",input);
 
-		if(copy_to_user(buffer, data, data_len)){
-			return -EFAULT;
-			*offset = data_len;
-		}
-	} else if(strncmp(input, "udp",3) == 0){
-		/*print udp count only*/
-		data_len = snprintf(data, sizeof(data), "UDP packets: %d\n", udp_count);
-
-		if(copy_to_user(buffer, data, data_len)){
-			return -EFAULT;
-			*offset = data_len;
-			printk(KERN_INFO "UDP packet count: %d\n", udp_count);
-		}
-	} else if(strncmp(input, "icmp",4) == 0){
-		/*print icmp count only*/
-		data_len = snprintf(data, sizeof(data), "ICMP packets: %d\n", icmp_count);
-
-		if(copy_to_user(buffer, data, data_len)){
-			return -EFAULT;
-			*offset = data_len;
-			printk(KERN_INFO "ICMP packet count: %d\n", icmp_count);
-		}
-	} else if(strncmp(input, "all",3) == 0){
-		/*print all count */
-		data_len = snprintf(data, sizeof(data), "TCP packets: %d\nUDP packets: %d\nICMP packets: %d\n", tcp_count, udp_count, icmp_count);
-	
-		if(copy_to_user(buffer, data, data_len)){
-			return -EFAULT;
-			*offset = data_len;
-			printk(KERN_INFO "TCP packets: %d\nUDP packets: %d\nICMP packets: %d\n", tcp_count, udp_count, icmp_count);
-		}
-	}
-	else {
-		printk(KERN_WARNING "Invalid command");
-	}
 	return len;
 }
-
-//static ssize_t proc_write(struct file* file, const char __user *buffer, size_t len, loff_t *offset){
-//	char input[16];
-//
-//	if(len > sizeof(input)-1)
-//		return -EINVAL;
-//	
-//	if(copy_from_user(input, buffer, len))
-//		return -EFAULT;
-//
-//	input[len] = '\0';
-//
-//	if(strncmp(input, "reset",5) == 0){
-//		tcp_count = 0;
-//		udp_count = 0;
-//		icmp_count = 0;
-//		printk(KERN_INFO "Packet counters reset\n");
-//	} else {
-//		printk(KERN_WARNING "Invalid command");
-//	}
-//	return len;
-//}
 
 /*Proc file struct*/
 static const struct proc_ops p_ops = {
 	.proc_read = proc_read,
-	.proc_write = proc_write,
+	.proc_write = proc_write_options,
 };
 
 static int __init packet_counter_init(void){
