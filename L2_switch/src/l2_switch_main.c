@@ -7,7 +7,9 @@
 #include <linux/tcp.h>
 #include <linux/udp.h>
 #include <linux/proc_fs.h>
+
 #include "../include/packet_handler.h"
+#include "../include/mac_table.h"
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Pooanm Gupta");
