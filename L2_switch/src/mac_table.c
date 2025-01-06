@@ -9,8 +9,74 @@
 
 #include "../include/mac_table.h"
 
-#define MAC_TABLE_SIZE	256
+/* MAC table hash function 
+ * (XOR based hash function)
+ */
+unsigned int mac_hash(unsigned char* mac_address){
+	unsigned int hash_value = 0;
+	
+	hash_value = mac_address[0] ^ mac_address[1] ^ mac_address[2] ^ mac_address[3] ^ mac_address[4] ^ mac_address[5];
+	printk(KERN_INFO "Hash Function value for mac %s: %d\n", mac_address, hash_value);
+	
+	return hash_value;
+}
 
+#ifdef MAC_TABLE_V2
+/*Define MAC Table*/
+static DEFINE_HASHTABLE(mac_table, MAC_TABLE_BITS);
+
+void mac_table_init()
+{
+	hash_init(mac_table);
+	printk(KERN_INFO "MAC table Init\n");
+}
+
+void mac_address_learn(unsigned char *mac_address, const char* port){
+	
+	struct mac_table_entry* entry_lookup = NULL;
+	/*Lookup mac_address*/
+	entry_lookup = mac_address_lookup(mac_address);
+	
+	/*if not present, then add entry to hash table*/
+	if(!entry_lookup){
+		/*Generate hash value*/
+		int hash_value = mac_hash(mac_address);
+		
+		/*Create new hash entry and init*/
+		struct mac_table_entry new_entry;
+		strncpy(new_entry.mac_addr, mac_address, strlen(mac_address));
+		strncpy(new_entry.port, port, strlen(port));
+
+		/*add to linked list*/
+		hash_add(mac_table, &new_entry.next, hash_value);
+	}
+}
+
+/*MAC address Lookup*/
+struct mac_table_entry* mac_address_lookup(unsigned char *mac_address){
+	/*Check if hash table empty, Return NULL.*/
+	if(hash_empty(mac_table)){
+		printk(KERN_INFO "MAC table Empty\n");
+		return NULL;
+	}
+
+	/*search for entry in Linked list*/
+	struct mac_table_entry *entry; 
+	int bkt;
+
+	hash_for_each(mac_table, bkt, entry, next) {
+		printk(KERN_INFO "[mac_table] entry %s %s \n", entry->mac_addr, entry->port);
+		if(strcmp(entry->mac_addr, mac_address)){
+			printk(KERN_INFO "Found matching entry in mac_table");
+			return entry;
+		}
+	}
+
+	/*Reach here if entry not found. return NULL */
+	return NULL;
+}
+
+#elif
 /*Init MAC table*/
 int mac_table_init(struct mac_table* table){
 
@@ -25,41 +91,31 @@ int mac_table_init(struct mac_table* table){
 	return 0;
 }
 
-/* MAC table hash function
- * Note: using XOR based hash function.
- */
-unsigned int mac_hash(unsigned char* mac){
-	unsigned int hash_value = 0;
-	
-	hash_value = mac[0] ^ mac[1] ^ mac[2] ^ mac[3] ^ mac[4] ^ mac[5];
-	printk(KERN_INFO "Hash Function valuefor mac %s: %d\n", mac, hash_value);
-	
-	return hash_value;
-}
+
 
 /*MAC address learn*/
 void mac_address_learn(struct mac_table* table, unsigned char *mac_address, const char* port){
 	
 	struct mac_entry* entry_lookup = NULL;
 	/*Lookup mac_address*/
-//	entry_lookup = mac_address_lookup(table, mac_address);
+	entry_lookup = mac_address_lookup(table, mac_address);
 	
 	/*if not present, then add entry to hash table*/
-	if(!entry_lookup){
-		/*Generate hash value*/
-		int hash_value = mac_hash(mac_address);
+	// if(!entry_lookup){
+	// 	/*Generate hash value*/
+	// 	int hash_value = mac_hash(mac_address);
 		
-		/*Create new hash entry and init*/
-		struct mac_entry* new_node = kmalloc(sizeof(struct mac_entry),GFP_KERNEL);
-		memcpy(new_node->mac_addr, mac_address, ETH_ALEN);
-		strcpy(new_node->port, port);
-		new_node->next = NULL;
+	// 	/*Create new hash entry and init*/
+	// 	struct mac_entry* new_node = kmalloc(sizeof(struct mac_entry),GFP_KERNEL);
+	// 	memcpy(new_node->mac_addr, mac_address, ETH_ALEN);
+	// 	strcpy(new_node->port, port);
+	// 	new_node->next = NULL;
 
-		/*add to linked list*/
-		new_node = table->bucket[hash_value]->next;
-		table->bucket[hash_value]->next = new_node;
-		printk(KERN_INFO "[mac_table] Added entry %s, %d\n", new_node->mac_addr, new_node->port);
-	}
+	// 	/*add to linked list*/
+	// 	new_node = table->bucket[hash_value]->next;
+	// 	table->bucket[hash_value]->next = new_node;
+	// 	printk(KERN_INFO "[mac_table] Added entry %s, %d\n", new_node->mac_addr, new_node->port);
+	// }
 }
 
 /*MAC address Lookup*/
@@ -72,8 +128,10 @@ struct mac_entry* mac_address_lookup(struct mac_table*  table, unsigned char *ma
 	struct mac_entry* current_entry = (table->bucket[hash_value])->next;
 	while(current_entry)
 	{
+		printk(KERN_INFO "[mac_table] entry %s, %s\n", current_entry->mac_addr, current_entry->port);
 		if(memcmp(current_entry->mac_addr, mac_address,6)==0){
 			/*entry found, return entry*/
+			printk(KERN_INFO "[mac_table] Found entry %s, %s \n", current_entry->mac_addr, current_entry->port);
 			return current_entry;
 		}
 		current_entry = current_entry->next;
@@ -100,5 +158,4 @@ void mac_table_deinit(struct mac_table* table){
 	kfree(table);
 	printk(KERN_INFO "MAC table Deinit done\n");
 }
-
-
+#endif

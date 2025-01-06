@@ -11,12 +11,12 @@
 #include "../include/packet_handler.h"
 #include "../include/mac_table.h"
 
-struct mac_table table;
+// struct mac_table table;
 
 /*Hook function*/
 static unsigned int packet_handler_hook(void *priv, struct sk_buff *skb, const struct nf_hook_state *state){
 	struct ethhdr *eth_header;
-	struct mac_entry* entry_lookup = NULL;
+	struct mac_table_entry *entry_lookup = NULL;
 
 	/*Is packet valid*/
 	if(!skb)
@@ -26,19 +26,20 @@ static unsigned int packet_handler_hook(void *priv, struct sk_buff *skb, const s
 	eth_header = eth_hdr(skb);
 	printk(KERN_INFO "[packet_handler] Dest MAC:%pM, Src MAC: %pM, Proto:%d\n", eth_header->h_dest, eth_header->h_source, eth_header->h_proto); 
 	
-	/*Src MAC address Learn. If ot already present in mac table, add new entry*/
-	//const char* src_interface = state->in->perm_addr;
-	mac_address_learn(&table, eth_header->h_source, state->in->perm_addr);
-//
-//	/*Dest MAC address lookup. If present in flow table send to port else flood*/
-//	entry_lookup = mac_address_lookup(&table, eth_header->h_dest);
-//	if(entry_lookup){
-//		/*Forward to port*/
-//		printk(KERN_INFO"Forwarding to port %s\n", entry_lookup->port);
-//	}
-//	else{
-//		printk(KERN_INFO"Flooding on all ports except src port\n");
-//	}
+	/*Src MAC address Learn. If not already present in mac table, add new entry*/
+	const char* src_interface = state->in->perm_addr;
+	mac_address_learn(eth_header->h_source, state->in->perm_addr);
+
+	/*Dest MAC address lookup. If present in flow table send to port else flood*/
+	entry_lookup = mac_address_lookup(eth_header->h_dest);
+	if(entry_lookup){
+		/*Forward to port*/
+		printk(KERN_INFO"Forwarding to port %s\n", entry_lookup->port);
+	}
+	else{
+		/*Flooding on all ports*/
+		printk(KERN_INFO"Flooding on all ports except src port\n");
+	}
 	return NF_ACCEPT; 
 }
 
@@ -63,12 +64,11 @@ int packet_handler_init(void){
 	printk(KERN_INFO "[packet_handler] Netfilter hook registered.\n");
 
 	/*Init MAC table*/
-	printk(KERN_INFO "[packet_handler] debug mac table size = %d", sizeof(table));
-	ret = mac_table_init(&table);
-	if(ret){
-		printk(KERN_ERR "Failed to init MAC table. Err %d \n", ret);
-		return ret;
-	}
+	mac_table_init();
+	// if(ret){
+	// 	printk(KERN_ERR "Failed to init MAC table. Err %d \n", ret);
+	// 	return ret;
+	// }
 	printk(KERN_ERR "MAC table init done\n");
 	return 0;
 }
@@ -76,7 +76,7 @@ int packet_handler_init(void){
 /*Deinit packet Handler*/
 void packet_handler_deinit(void){
 	/*Deinit MAC table*/
-	mac_table_deinit(&table);
+	// mac_table_deinit(&table);
 	
 	/*Unregister Netfilter hook*/
 	nf_unregister_net_hook(&init_net, &netfilter_ops);

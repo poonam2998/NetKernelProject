@@ -7,7 +7,6 @@
 #include <linux/udp.h>
 #include <linux/proc_fs.h>
 
-//MODULE_LICENSE("GPL");
 
 int packet_handler_init(void);
 
