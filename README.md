@@ -62,3 +62,28 @@ cat /proc/packet_counter
 # Unload module
 sudo rmmod packet_counter
 ```
+
+
+## L2 Switch Kernel Module (packet_counter)
+Layer-2 software switch to forward Ethernet frames based on MAC addresses, utilizing Linux kernel networking APIs and Netfilter for packet processing and forwarding. Implemented MAC address learning along with and dynamic forwarding logic.
+
+### Testing Module
+```
+# Enable kernel logs 
+sudo dmesg -w &
+
+# Load Module
+sudo insmod l2_switch.ko
+
+# Test with ping ( until 2 responses)
+ping 127.0.0.1 -c 2
+
+# Unload module
+sudo rmmod l2_switch
+```
+
+### TODOs
+- [ ] Test module using virtual networks
+- [ ] Add ageing time on mac_table. Discard entires based on ageing time
+
+
