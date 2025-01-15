@@ -1,4 +1,5 @@
-# PacketLogger
+# NetKernel Project
+Started this repository as a collection of my hobby projects and an attempt to dive deeper into linux kernel module development and the netfilter library.
 
 ## Hello World Linux Kernel Module (module_hello)
 Test module for demonstrating basic module functionality and reading from proc file system. It prints messages in kernel log on loading and unloading. 
